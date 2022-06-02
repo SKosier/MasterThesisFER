@@ -1,0 +1,14 @@
+# ninja log v5
+2	3182	1653828242420412779	CMakeFiles/diplomski_tuga.dir/reference.cpp.o	8fd236e0d37a4094
+3771	3996	1653828343738093231	diplomski_tuga	8a0ca81523b3c2ec
+0	120	1653829426199985827	build.ninja	9b7761465e67538e
+18	315	1653828239555450092	CMakeFiles/diplomski_tuga.dir/ksw2_extz2_sse.c.o	d390212d9c629859
+2	3771	1653828343511096187	CMakeFiles/diplomski_tuga.dir/main.cpp.o	6769e3206eedaa26
+0	4	0	clean	cb93b96520b96199
+12	2581	1653828241820420593	CMakeFiles/diplomski_tuga.dir/embedding.cpp.o	9e0e923987c7b79
+1	1128	1654024391233578321	CMakeFiles/diplomski_tuga.dir/embedding.cpp.o	9e0e923987c7b79
+1	1294	1654024391398577679	CMakeFiles/diplomski_tuga.dir/reference.cpp.o	8fd236e0d37a4094
+1	2126	1654024392228574448	CMakeFiles/diplomski_tuga.dir/main.cpp.o	6769e3206eedaa26
+1	1753	1654026116624584629	CMakeFiles/diplomski_tuga.dir/reference.cpp.o	8fd236e0d37a4094
+1	3245	1654026118114611792	CMakeFiles/diplomski_tuga.dir/main.cpp.o	6769e3206eedaa26
+3245	3382	1654026118254614344	diplomski_tuga	8a0ca81523b3c2ec
