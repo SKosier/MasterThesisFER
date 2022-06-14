@@ -5,11 +5,13 @@
 using namespace tbb::flow;
 using namespace std;
 
-const char *CT_ext = ".ct_hash";
-const char *GA_ext = ".ga_hash";
+const uint8_t ct_conv_type = 1;
+const uint8_t ga_conv_type = 2;
+bool is_non_directional = false; //only perform CT/CT and CT/GA mappings
 
 unsigned kmer_len = 32;
 int kmer_step = 1;
+
 uint64_t mask;
 unsigned pairdis = 1000;
 string g_out, g_batch_file, g_embed_file;
@@ -20,6 +22,8 @@ bool enable_extension = true, enable_wfa_extension = false, extend_all = false;
 int g_ncpus = 1;
 float delTime = 0, mapqTime = 0, keyvTime = 0, posvTime = 0, sortTime = 0;
 int8_t mat[25];
+
+void start_mapping(int ac, char **av, int opn, bool is_ga);
 
 void make_code(void) {
     for (size_t i = 0; i < 256; i++)
@@ -35,11 +39,21 @@ void make_code(void) {
     code['N'] = code['n'] = 0;
 }
 
-static void parse(char seq[], char fwd[], char rev[], char rev_str[]) {
+static void parse(char seq[], char fwd[], char rev[], char rev_str[], uint8_t conversion_type) {
     unsigned len = strlen(seq);
 
     for (size_t i = 0; i < len; i++) {
         uint8_t c = *(code + seq[i]);
+
+        // check if we should convert sequence to ct
+        if (conversion_type == ct_conv_type && c == 1) {
+            c = 3; // convert c to t
+
+        // else check if we need to convert to ga
+        } else if (conversion_type == ga_conv_type && c == 2) {
+            c = 0;
+        }
+
         fwd[i] = c;
         rev[len - 1 - i] = c == 4 ? c : 3 - c;
         rev_str[len - 1 - i] = rcsymbol[c];
@@ -91,6 +105,7 @@ void print_usage() {
     cerr << "\t-w Use WFA for extension. KSW used by default. \n";
     cerr << "\t-p Maximum distance allowed between the paired-end reads [1000]\n";
     cerr << "\t-d Disable embedding, extend all candidates from seeding (this mode is super slow, only for benchmark).\n";
+    cerr << "\t-n Non directional; The best out of four (CT-CT, CT-GA, GA-CT, GA/GA) read mapping is chosen as the best reference mapping\n";
 }
 
 void AccAlign::print_stats() {
@@ -115,8 +130,7 @@ void AccAlign::print_stats() {
 //#endif
 }
 
-bool AccAlign::fastq(const char *F1, const char *F2, bool enable_gpu) {
-
+bool AccAlign::fastq(const char *F1, const char *F2, bool enable_gpu, Reference &r2) {
     bool is_paired = false;
 
     gzFile in1 = gzopen(F1, "rt");
@@ -139,19 +153,18 @@ bool AccAlign::fastq(const char *F1, const char *F2, bool enable_gpu) {
     tbb::concurrent_bounded_queue<ReadCnt> outputQ;
     tbb::concurrent_bounded_queue<ReadPair> dataQ;
 
-    thread cpu_thread = thread(&AccAlign::cpu_root_fn, this, &inputQ, &outputQ);
-    thread out_thread = thread(&AccAlign::output_root_fn, this, &outputQ, &dataQ);
+    thread cpu_thread = thread(&AccAlign::cpu_root_fn, this, &inputQ, &outputQ, std::ref(r2));
+    thread out_thread = thread(&AccAlign::output_root_fn, this, &outputQ, &dataQ, std::ref(r2));
 
     auto start = std::chrono::system_clock::now();
-
     int total_nreads = 0, nreads_per_vec = 0, vec_index = 0, vec_size = 50;
 
     int batch_size = BATCH_SIZE;
-    if (is_paired)
-        batch_size /= 2;
+    if (is_paired) batch_size /= 2;
+
     Read *reads[vec_size];
-    reads[vec_index] = new Read[batch_size];
     Read *reads2[vec_size];
+    reads[vec_index] = new Read[batch_size];
     if (is_paired) {
         reads2[vec_index] = new Read[batch_size];
     }
@@ -295,7 +308,8 @@ bool AccAlign::fastq(const char *F1, const char *F2, bool enable_gpu) {
 }
 
 void AccAlign::output_root_fn(tbb::concurrent_bounded_queue<ReadCnt> *outputQ,
-                              tbb::concurrent_bounded_queue<ReadPair> *dataQ) {
+                              tbb::concurrent_bounded_queue<ReadPair> *dataQ,
+                              Reference &r2) {
     cerr << "Extension and output function starting.." << endl;
 
     unsigned nreads = 0;
@@ -308,7 +322,7 @@ void AccAlign::output_root_fn(tbb::concurrent_bounded_queue<ReadCnt> *outputQ,
             targetQ->push(gpu_reads);   //put sentinel back
             break;
         }
-        align_wrapper(0, 0, nreads, std::get<0>(gpu_reads), std::get<1>(gpu_reads), dataQ);
+        align_wrapper(0, 0, nreads, std::get<0>(gpu_reads), std::get<1>(gpu_reads), dataQ, r2);
     } while (1);
 
     cerr << "Extension and output function quitting...\n";
@@ -317,28 +331,55 @@ void AccAlign::output_root_fn(tbb::concurrent_bounded_queue<ReadCnt> *outputQ,
 class Parallel_mapper {
     Read *all_reads1;
     Read *all_reads2;
-    AccAlign *acc_obj;
+    AccAlign *acc_obj_ct;
+    AccAlign *acc_obj_ga;
 
 public:
-    Parallel_mapper(Read *_all_reads1, Read *_all_reads2, AccAlign *_acc_obj) :
-            all_reads1(_all_reads1), all_reads2(_all_reads2), acc_obj(_acc_obj) {}
+    Parallel_mapper(Read *_all_reads1, Read *_all_reads2, AccAlign *_acc_obj_ct, AccAlign *_acc_obj_ga) :
+            all_reads1(_all_reads1), all_reads2(_all_reads2), acc_obj_ct(_acc_obj_ct), acc_obj_ga(_acc_obj_ga) {}
 
     void operator()(const tbb::blocked_range<size_t> &r) const {
         if (!all_reads2) {
             for (size_t i = r.begin(); i != r.end(); ++i) {
-                acc_obj->map_read(*(all_reads1 + i));
+                Read &read1 = *(all_reads1 + i);
+                Read read2 = read1.makeCopy();
+
+                acc_obj_ct->map_read(read1);
+                acc_obj_ga->map_read(read2);
+
+                int q1 = acc_obj_ct->get_mapq(read1.best, read1.secBest);
+                int q2 = acc_obj_ga->get_mapq(read2.best, read2.secBest);
+
+                if (q2 > q1){ // zamijeni read
+                    read2.mapped_to_ga = true;
+                    all_reads1[i] = read2;
+
+                } else if (q2 == q1) {
+                    acc_obj_ct->align_read(read1);
+                    acc_obj_ga->align_read(read2);
+                    if (read2.as > read1.as) {
+                        read2.mapped_to_ga = true;
+                        all_reads1[i] = read2;
+                    }
+
+                } else {
+                    // provjeri logiku
+                }
             }
+
         } else {
             for (size_t i = r.begin(); i != r.end(); ++i) {
-                acc_obj->map_paired_read(*(all_reads1 + i), *(all_reads2 + i));
+                acc_obj_ct->map_paired_read(*(all_reads1 + i), *(all_reads2 + i));
             }
         }
     }
 };
 
 void AccAlign::cpu_root_fn(tbb::concurrent_bounded_queue<ReadCnt> *inputQ,
-                           tbb::concurrent_bounded_queue<ReadCnt> *outputQ) {
+                           tbb::concurrent_bounded_queue<ReadCnt> *outputQ,
+                           Reference &r2) {
     cerr << "CPU Root function starting.." << endl;
+    AccAlign f2(r2);
 
     tbb::concurrent_bounded_queue<ReadCnt> *targetQ = inputQ;
     int nreads = 0, total = 0;
@@ -354,7 +395,7 @@ void AccAlign::cpu_root_fn(tbb::concurrent_bounded_queue<ReadCnt> *inputQ,
 
         tbb::task_scheduler_init init(g_ncpus);
         tbb::parallel_for(tbb::blocked_range<size_t>(0, nreads),
-                          Parallel_mapper(std::get<0>(cpu_readcnt), std::get<1>(cpu_readcnt), this)
+                          Parallel_mapper(std::get<0>(cpu_readcnt), std::get<1>(cpu_readcnt), this, &f2)
         );
 
         outputQ->push(cpu_readcnt);
@@ -1025,6 +1066,7 @@ void AccAlign::embed_wrapper(Read &R, bool ispe,
 
 }
 
+// max mapq = 60
 int AccAlign::get_mapq(int best, int secBest) {
     int mapq;
     if (secBest == 0 && best == 0) {
@@ -1039,9 +1081,8 @@ int AccAlign::get_mapq(int best, int secBest) {
 }
 
 void AccAlign::map_read(Read &R) {
-
     auto start = std::chrono::system_clock::now();
-    parse(R.seq, R.fwd, R.rev, R.rev_str);
+    parse(R.seq, R.fwd, R.rev, R.rev_str, ct_conv_type);
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     parse_time += elapsed.count();
@@ -1221,8 +1262,8 @@ void AccAlign::extend_pair(Read &mate1, Read &mate2,
 void AccAlign::map_paired_read(Read &mate1, Read &mate2) {
 
     auto start = std::chrono::system_clock::now();
-    parse(mate1.seq, mate1.fwd, mate1.rev, mate1.rev_str);
-    parse(mate2.seq, mate2.fwd, mate2.rev, mate2.rev_str);
+    parse(mate1.seq, mate1.fwd, mate1.rev, mate1.rev_str, 0);
+    parse(mate2.seq, mate2.fwd, mate2.rev, mate2.rev_str, 0);
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     parse_time += elapsed.count();
@@ -1674,21 +1715,34 @@ void AccAlign::out_sam(string *s) {
 class Tbb_aligner {
     Read *all_reads;
     string *sams;
-    AccAlign *acc_obj;
+    AccAlign *acc_obj_ct;
+    AccAlign *acc_obj_ga;
 
 public:
-    Tbb_aligner(Read *_all_reads, string *_sams, AccAlign *_acc_obj) :
-            all_reads(_all_reads), sams(_sams), acc_obj(_acc_obj) {}
+    Tbb_aligner(Read *_all_reads, string *_sams, AccAlign *_acc_obj_ct, AccAlign *_acc_obj_ga) :
+            all_reads(_all_reads), sams(_sams), acc_obj_ct(_acc_obj_ct), acc_obj_ga(_acc_obj_ga) {}
 
     void operator()(const tbb::blocked_range<size_t> &r) const {
         for (size_t i = r.begin(); i != r.end(); ++i) {
             if ((all_reads + i)->strand != '*') {
-                if (enable_wfa_extension)
-                    acc_obj->wfa_align_read(*(all_reads + i));
-                else
-                    acc_obj->align_read(*(all_reads + i));
+                Read &r = *(all_reads + i);
+                if (enable_wfa_extension) {
+                    if (r.mapped_to_ga) {
+                        acc_obj_ga->wfa_align_read(r);
+                    } else {
+                        acc_obj_ct->wfa_align_read(r);
+                    }
+
+                } else {
+                    if (r.mapped_to_ga) {
+                        acc_obj_ga->align_read(r);
+                    } else {
+                        acc_obj_ct->align_read(r);
+                    }
+
+                }
             }
-            acc_obj->snprintf_sam(*(all_reads + i), sams + i);
+            acc_obj_ct->snprintf_sam(*(all_reads + i), sams + i);
         }
     }
 };
@@ -1725,13 +1779,14 @@ public:
 };
 
 void AccAlign::align_wrapper(int tid, int soff, int eoff, Read *ptlread, Read *ptlread2,
-                             tbb::concurrent_bounded_queue<ReadPair> *dataQ) {
+                             tbb::concurrent_bounded_queue<ReadPair> *dataQ, Reference &r2) {
+    AccAlign f2(r2);
 
     if (!ptlread2) {
         // single-end read alignment
         string sams[eoff];
         tbb::task_scheduler_init init(g_ncpus);
-        tbb::parallel_for(tbb::blocked_range<size_t>(soff, eoff), Tbb_aligner(ptlread, sams, this));
+        tbb::parallel_for(tbb::blocked_range<size_t>(soff, eoff), Tbb_aligner(ptlread, sams, this, &f2));
 
         auto start = std::chrono::system_clock::now();
         for (int i = soff; i < eoff; i++) {
@@ -1891,7 +1946,6 @@ void AccAlign::score_region(Read &r, char *qseq, Region &region,
             free(ez_l.cigar);
         }
 
-
         // matched seed
         uint32_t cigar_m[] = {kmer_len << 4};
         append_cigar(extension, 1, cigar_m);
@@ -1960,7 +2014,6 @@ void AccAlign::score_region(Read &r, char *qseq, Region &region,
         a.mismatches = edit_mismatch;
         free(extension);
     }
-
 }
 
 //determine chromo id
@@ -2034,6 +2087,8 @@ void AccAlign::align_read(Read &R) {
     sw_time += elapsed.count();
 }
 
+// TODO (SK) check pattern jer koristi ref.str()
+//  affine_wavefronts_align(affine_wavefronts, pattern, rlen, text, rlen);
 void AccAlign::wfa_align_read(Read &R) {
     auto start = std::chrono::system_clock::now();
 
@@ -2047,7 +2102,7 @@ void AccAlign::wfa_align_read(Read &R) {
 
   /*  if (enable_extension && region.embed_dist) {
         // Allocate MM
-    //    mm_allocator_t *const mm_allocator = mm_allocator_new(BUFFER_SIZE_8M);
+        mm_allocator_t *const mm_allocator = mm_allocator_new(BUFFER_SIZE_8M);
         // Set penalties
         affine_penalties_t affine_penalties = {
                 .match = -SC_MCH,
@@ -2060,7 +2115,7 @@ void AccAlign::wfa_align_read(Read &R) {
         affine_wavefronts_t *affine_wavefronts = affine_wavefronts_new_complete(
                 rlen, rlen, &affine_penalties, NULL, mm_allocator);
         // Align
-  //      affine_wavefronts_align(affine_wavefronts, pattern, rlen, text, rlen);
+        affine_wavefronts_align(affine_wavefronts, pattern, rlen, text, rlen);
 
         // Display alignment
         edit_cigar_t *edit_cigar = &affine_wavefronts->edit_cigar;
@@ -2442,6 +2497,10 @@ int main(int ac, char **av) {
                 extend_all = true;
                 opn += 1;
                 flag = true;
+            } else if (av[opn][1] == 'n') {
+                is_non_directional = true;
+                opn += 1;
+                flag = true;
             } else {
                 print_usage();
             }
@@ -2459,28 +2518,68 @@ int main(int ac, char **av) {
     tbb::task_scheduler_init init(g_ncpus);
     make_code();
 
-    // load reference once
-    Reference *r = new Reference(av[opn], CT_ext);
+//    start_mapping(ac, av, opn, false);
+//    start_mapping(ac, av, opn, false);
+
+    Reference *r1 = new Reference(av[opn], false);
+    Reference *r2 = new Reference(av[opn], true);
     opn++;
     if (enable_extension && !enable_wfa_extension)
         ksw_gen_simple_mat(5, mat, SC_MCH, SC_MIS, SC_AMBI);
 
     size_t total_begin = time(NULL);
+    auto start = std::chrono::system_clock::now();
 
+    AccAlign f1(*r1);
+    f1.open_output(g_out);
+
+    if (opn == ac - 1) {
+        f1.fastq(av[opn], "\0", false, *r2);
+//    f.tbb_fastq(av[opn], "\0");
+    } else if (opn == ac - 2) {
+//    f.fastq(av[opn], av[opn + 1], false);
+        f1.tbb_fastq(av[opn], av[opn + 1]);
+    } else {
+        print_usage();
+        //return;
+    }
+
+    auto end = std::chrono::system_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    cerr << "Time to align: " << elapsed.count() / 1000 << " secs\n";
+
+    f1.print_stats();
+    f1.close_output();
+    delete r1;
+    delete r2;
+
+    cerr << "Total time: " << (time(NULL) - total_begin) << " secs\n";
+
+
+    return 0;
+}
+
+void start_mapping(int ac, char **av, int opn, bool is_ga) {
+    Reference *r = new Reference(av[opn], is_ga);
+    opn++;
+    if (enable_extension && !enable_wfa_extension)
+        ksw_gen_simple_mat(5, mat, SC_MCH, SC_MIS, SC_AMBI);
+
+    size_t total_begin = time(NULL);
     auto start = std::chrono::system_clock::now();
 
     AccAlign f(*r);
     f.open_output(g_out);
 
     if (opn == ac - 1) {
-        f.fastq(av[opn], "\0", false);
+        f.fastq(av[opn], "\0", false, *r);
 //    f.tbb_fastq(av[opn], "\0");
     } else if (opn == ac - 2) {
 //    f.fastq(av[opn], av[opn + 1], false);
         f.tbb_fastq(av[opn], av[opn + 1]);
     } else {
         print_usage();
-        return 0;
+        return;
     }
 
     auto end = std::chrono::system_clock::now();
@@ -2489,10 +2588,7 @@ int main(int ac, char **av) {
 
     f.print_stats();
     f.close_output();
-
     delete r;
 
     cerr << "Total time: " << (time(NULL) - total_begin) << " secs\n";
-
-    return 0;
 }

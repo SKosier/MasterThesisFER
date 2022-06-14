@@ -18,12 +18,14 @@ class AccAlign {
   std::mutex sam_mutex;
 
   void cpu_root_fn(tbb::concurrent_bounded_queue<ReadCnt> *inputQ,
-                   tbb::concurrent_bounded_queue<ReadCnt> *outputQ);
+                   tbb::concurrent_bounded_queue<ReadCnt> *outputQ,
+                   Reference &r2);
   void output_root_fn(tbb::concurrent_bounded_queue<ReadCnt> *outputQ,
-                      tbb::concurrent_bounded_queue<ReadPair> *dataQ);
+                      tbb::concurrent_bounded_queue<ReadPair> *dataQ,
+                      Reference &r2);
   void align_wrapper(int tid, int soff, int eoff,
                      Read *ptlread, Read *ptlread2,
-                     tbb::concurrent_bounded_queue<ReadPair> *dataQ);
+                     tbb::concurrent_bounded_queue<ReadPair> *dataQ, Reference &r2);
   void embed_wrapper(Read &R, bool ispe, vector<Region> &fregion,
                      vector<Region> &rregion, unsigned &fbest, unsigned &fnext, unsigned &rbest,
                      unsigned &rnext, int &best_threshold, int &next_threshold);
@@ -69,7 +71,7 @@ class AccAlign {
 
   void open_output(std::string &out_file);
   void close_output();
-  bool fastq(const char *F1, const char *F2, bool enable_gpu);
+  bool fastq(const char *F1, const char *F2, bool enable_gpu, Reference &r2);
   void print_stats();
   void map_read(Read &R);
   void align_read(Read &R);

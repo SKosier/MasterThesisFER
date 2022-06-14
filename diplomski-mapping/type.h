@@ -35,6 +35,7 @@ struct Read {
   char strand;
   short mapq, kmer_step; //kmer_step used that find the seed
   Region best_region;
+  bool mapped_to_ga;
 
   friend gzFile &operator>>(gzFile &in, Read &r);
 
@@ -43,12 +44,15 @@ struct Read {
     secBest = INT_MAX;
   }
 
+  Read makeCopy() {
+      return *this;
+  }
 };
 
 class Reference {
  public:
   void load_index(const char *F, const char *ext);
-  Reference(const char *F, const char *ext);
+  Reference(const char *F, bool is_ga);
 
   std::string ref;
   std::vector<std::string> name;

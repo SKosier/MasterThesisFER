@@ -2,15 +2,26 @@
 
 extern uint8_t code[256];
 
+const char *CT_ext = ".ct_hash";
+const char *GA_ext = ".ga_hash";
+
 class RefParser {
   string &ref;
+  bool is_ga; //default false;
 
  public:
-  RefParser(string &ref) : ref(ref) {}
+  RefParser(string &ref, bool is_ga) : ref(ref), is_ga(is_ga) {}
 
   void operator()(const tbb::blocked_range<size_t> &r) const {
-    for (size_t i = r.begin(); i != r.end(); ++i)
-      ref[i] = *(code + ref[i]);
+    for (size_t i = r.begin(); i != r.end(); ++i) {
+      uint8_t code_o = *(code + ref[i]);
+      if (is_ga == false) { // we are converting c to t
+          if (code_o == 1) code_o = 3;
+      } else {             // we are converting g to a
+          if (code_o == 2) code_o = 0;
+      }
+      ref[i] = code_o;
+    }
   }
 };
 
@@ -57,9 +68,10 @@ void Reference::load_index(const char *F, const char *ext) {
 
 }
 
-Reference::Reference(const char *F, const char *ext) {
+Reference::Reference(const char *F, bool is_ga) {
   auto start = std::chrono::system_clock::now();
 
+  auto ext = is_ga ? GA_ext : CT_ext;
   // Start index load in parallel
   thread t(&Reference::load_index, this, F, ext);
 
@@ -133,7 +145,7 @@ Reference::Reference(const char *F, const char *ext) {
     cerr << "Parsing reference.\n";
     tbb::parallel_for(
         tbb::blocked_range<size_t>(0, ref_size),
-        RefParser(ref));
+        RefParser(ref, is_ga));
     fi.close();
     offset.push_back(ref_size);
     cerr << "Loaded reference size: " << ref_size << endl;
