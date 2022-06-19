@@ -36,6 +36,7 @@ struct Read {
   short mapq, kmer_step; //kmer_step used that find the seed
   Region best_region;
   bool mapped_to_ga;
+  bool isAligned;
 
   friend gzFile &operator>>(gzFile &in, Read &r);
 

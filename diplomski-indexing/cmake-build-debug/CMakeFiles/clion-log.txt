@@ -1,4 +1,4 @@
-/var/lib/snapd/snap/clion/190/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/var/lib/snapd/snap/clion/190/bin/ninja/linux/ninja -G Ninja -S /home/vagabundo/CLionProjects/diplomski-indexing -B /home/vagabundo/CLionProjects/diplomski-indexing/cmake-build-debug
+/var/lib/snapd/snap/clion/193/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/var/lib/snapd/snap/clion/193/bin/ninja/linux/ninja -G Ninja -S /home/vagabundo/CLionProjects/diplomski-indexing -B /home/vagabundo/CLionProjects/diplomski-indexing/cmake-build-debug
 -- The C compiler identification is GNU 11.3.1
 -- The CXX compiler identification is GNU 11.3.1
 -- Detecting C compiler ABI info

@@ -23,8 +23,6 @@ int g_ncpus = 1;
 float delTime = 0, mapqTime = 0, keyvTime = 0, posvTime = 0, sortTime = 0;
 int8_t mat[25];
 
-void start_mapping(int ac, char **av, int opn, bool is_ga);
-
 void make_code(void) {
     for (size_t i = 0; i < 256; i++)
         code[i] = 4;
@@ -105,7 +103,7 @@ void print_usage() {
     cerr << "\t-w Use WFA for extension. KSW used by default. \n";
     cerr << "\t-p Maximum distance allowed between the paired-end reads [1000]\n";
     cerr << "\t-d Disable embedding, extend all candidates from seeding (this mode is super slow, only for benchmark).\n";
-    cerr << "\t-n Non directional; The best out of four (CT-CT, CT-GA, GA-CT, GA/GA) read mapping is chosen as the best reference mapping\n";
+//    cerr << "\t-n Non directional; The best out of four (CT-CT, CT-GA, GA-CT, GA-GA) read mapping is chosen as the best reference mapping\n";
 }
 
 void AccAlign::print_stats() {
@@ -347,14 +345,14 @@ public:
                 acc_obj_ct->map_read(read1);
                 acc_obj_ga->map_read(read2);
 
-                int q1 = acc_obj_ct->get_mapq(read1.best, read1.secBest);
-                int q2 = acc_obj_ga->get_mapq(read2.best, read2.secBest);
+                read1.mapq = acc_obj_ct->get_mapq(read1.best, read1.secBest);
+                read2.mapq = acc_obj_ga->get_mapq(read2.best, read2.secBest);
 
-                if (q2 > q1){ // zamijeni read
+                if (read2.mapq > read1.mapq){ // change reads
                     read2.mapped_to_ga = true;
                     all_reads1[i] = read2;
 
-                } else if (q2 == q1) {
+                } else if (read2.mapq == read1.mapq) {
                     acc_obj_ct->align_read(read1);
                     acc_obj_ga->align_read(read2);
                     if (read2.as > read1.as) {
@@ -363,13 +361,47 @@ public:
                     }
 
                 } else {
-                    // provjeri logiku
+                    // continue
                 }
             }
 
         } else {
             for (size_t i = r.begin(); i != r.end(); ++i) {
+                Read read1_copy = all_reads1[i].makeCopy();
+                Read read2_copy = all_reads2[i].makeCopy();
+
                 acc_obj_ct->map_paired_read(*(all_reads1 + i), *(all_reads2 + i));
+                acc_obj_ga->map_paired_read(read1_copy, read2_copy);
+
+                all_reads1[i].mapq = acc_obj_ct->get_mapq(all_reads1[i].best, all_reads1[i].secBest);
+                all_reads2[i].mapq = acc_obj_ct->get_mapq(all_reads2[i].best, all_reads2[i].secBest);
+                read1_copy.mapq = acc_obj_ga->get_mapq(read1_copy.best, read1_copy.secBest);
+                read2_copy.mapq = acc_obj_ga->get_mapq(read2_copy.best, read2_copy.secBest);
+
+                int mapq_pe_ct = all_reads1[i].mapq > all_reads2[i].mapq ? all_reads1[i].mapq : all_reads2[i].mapq;
+                int mapq_pe_ga = read1_copy.mapq > read2_copy.mapq ? read1_copy.mapq : read2_copy.mapq;
+
+                if (mapq_pe_ga > mapq_pe_ct) {
+                    read1_copy.mapped_to_ga = true;
+                    read2_copy.mapped_to_ga = true;
+                    all_reads1[i] = read1_copy;
+                    all_reads2[i] = read2_copy;
+
+                } else if (mapq_pe_ga == mapq_pe_ct) {
+                    acc_obj_ct->align_read(all_reads1[i]);
+                    acc_obj_ct->align_read(all_reads2[i]);
+
+                    acc_obj_ga->align_read(read1_copy);
+                    acc_obj_ga->align_read(read2_copy);
+
+                    if ((read1_copy.as > all_reads1[i].as && read1_copy.as > all_reads2[i].as) ||
+                        (read2_copy.as > all_reads1[i].as && read2_copy.as > all_reads2[i].as)) {
+                        read1_copy.mapped_to_ga = true;
+                        read2_copy.mapped_to_ga = true;
+                        all_reads1[i] = read1_copy;
+                        all_reads2[i] = read2_copy;
+                    }
+                }
             }
         }
     }
@@ -1262,8 +1294,8 @@ void AccAlign::extend_pair(Read &mate1, Read &mate2,
 void AccAlign::map_paired_read(Read &mate1, Read &mate2) {
 
     auto start = std::chrono::system_clock::now();
-    parse(mate1.seq, mate1.fwd, mate1.rev, mate1.rev_str, 0);
-    parse(mate2.seq, mate2.fwd, mate2.rev, mate2.rev_str, 0);
+    parse(mate1.seq, mate1.fwd, mate1.rev, mate1.rev_str, ct_conv_type);
+    parse(mate2.seq, mate2.fwd, mate2.rev, mate2.rev_str, ga_conv_type);
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     parse_time += elapsed.count();
@@ -2070,7 +2102,7 @@ void AccAlign::save_region(Read &R, size_t rlen, Region &region,
 void AccAlign::align_read(Read &R) {
     auto start = std::chrono::system_clock::now();
 
-    if (R.strand == '*') {
+    if (R.strand == '*' || R.isAligned) {
         return;
     }
 
@@ -2081,6 +2113,8 @@ void AccAlign::align_read(Read &R) {
     size_t rlen = strlen(R.seq);
     score_region(R, s, region, a);
     save_region(R, rlen, region, a);
+
+    R.isAligned = true;
 
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
@@ -2275,41 +2309,85 @@ AccAlign::~AccAlign() {
 }
 
 struct tbb_map {
-    AccAlign *accalign;
+    AccAlign *accalign_ct;
+    AccAlign *accalign_ga;
 
 public:
-    tbb_map(AccAlign *obj) : accalign(obj) {}
+    tbb_map(AccAlign *_acc_obj_ct, AccAlign *_acc_obj_ga) : accalign_ct(_acc_obj_ct), accalign_ga(_acc_obj_ga) {}
 
     Read *operator()(Read *r) {
-        accalign->map_read(*r);
+        accalign_ct->map_read(*r);
         return r;
     }
 
     ReadPair operator()(ReadPair p) {
-        Read *mate1 = std::get<0>(p);
-        Read *mate2 = std::get<1>(p);
-        accalign->map_paired_read(*mate1, *mate2);
+        Read &mate1 = *std::get<0>(p);
+        Read &mate2 = *std::get<1>(p);
+
+        Read mate3 = mate1.makeCopy();
+        Read mate4 = mate2.makeCopy();
+
+        accalign_ct->map_paired_read(mate1, mate2);
+        accalign_ga->map_paired_read(mate3, mate4);
+
+        mate1.mapq = accalign_ct->get_mapq(mate1.best, mate1.secBest);
+        mate2.mapq = accalign_ct->get_mapq(mate2.best, mate2.secBest);
+        mate3.mapq = accalign_ga->get_mapq(mate3.best, mate3.secBest);
+        mate4.mapq = accalign_ga->get_mapq(mate4.best, mate4.secBest);
+
+        int mapq_pe_ct = mate1.mapq > mate2.mapq ? mate1.mapq : mate2.mapq;
+        int mapq_pe_ga = mate3.mapq > mate4.mapq ? mate3.mapq : mate4.mapq;
+
+        if (mapq_pe_ga > mapq_pe_ct) {
+            mate3.mapped_to_ga = true;
+            mate4.mapped_to_ga = true;
+            *std::get<0>(p) = mate3;
+            *std::get<1>(p) = mate4;
+
+        } else if (mapq_pe_ct == mapq_pe_ga) {
+            accalign_ct->align_read(mate1);
+            accalign_ct->align_read(mate2);
+
+            accalign_ga->align_read(mate3);
+            accalign_ga->align_read(mate4);
+
+            if ((mate3.as > mate1.as && mate3.as > mate2.as) ||
+                    (mate4.as > mate1.as && mate4.as > mate2.as)) {
+                mate3.mapped_to_ga = true;
+                mate4.mapped_to_ga = true;
+                *std::get<0>(p) = mate3;
+                *std::get<1>(p) = mate4;
+            }
+        }
 
         return p;
     }
 };
 
 struct tbb_align {
-    AccAlign *accalign;
+    AccAlign *accalign_ct;
+    AccAlign *accalign_ga;
 
 public:
-    tbb_align(AccAlign *obj) : accalign(obj) {}
+    tbb_align(AccAlign *_acc_obj_ct, AccAlign *_acc_obj_ga) : accalign_ct(_acc_obj_ct), accalign_ga(_acc_obj_ga) {}
 
     Read *operator()(Read *r) {
-        accalign->align_read(*r);
+        accalign_ct->align_read(*r);
         return r;
     }
 
     ReadPair operator()(ReadPair p) {
         Read *mate1 = std::get<0>(p);
         Read *mate2 = std::get<1>(p);
-        accalign->align_read(*mate1);
-        accalign->align_read(*mate2);
+
+        if (mate1->mapped_to_ga) {
+            accalign_ga->align_read(*mate1);
+            accalign_ga->align_read(*mate2);
+
+        } else {
+            accalign_ct->align_read(*mate1);
+            accalign_ct->align_read(*mate2);
+        }
 
         int mapq_pe = mate1->mapq > mate2->mapq ? mate1->mapq : mate2->mapq;
         if (mate1->mapq < mapq_pe) mate1->mapq = (int) (.2f * mate1->mapq + .8f * mapq_pe + .499f);
@@ -2320,13 +2398,19 @@ public:
 };
 
 struct tbb_score {
-    AccAlign *accalign;
+    AccAlign *accalign_ct;
+    AccAlign *accalign_ga;
 
 public:
-    tbb_score(AccAlign *obj) : accalign(obj) {}
+    tbb_score(AccAlign *_acc_obj_ct, AccAlign *_acc_obj_ga) : accalign_ct(_acc_obj_ct), accalign_ga(_acc_obj_ga) {}
 
     continue_msg operator()(Read *r) {
-        accalign->print_sam(*r);
+        if (r->mapped_to_ga) {
+            accalign_ga->print_sam(*r);
+        } else {
+            accalign_ct->print_sam(*r);
+        }
+
         delete r;
         return continue_msg();
     }
@@ -2334,7 +2418,13 @@ public:
     continue_msg operator()(ReadPair p) {
         Read *mate1 = std::get<0>(p);
         Read *mate2 = std::get<1>(p);
-        accalign->print_paired_sam(*mate1, *mate2);
+
+        if (mate1->mapped_to_ga) {
+            accalign_ga->print_paired_sam(*mate1, *mate2);
+        } else {
+            accalign_ct->print_paired_sam(*mate1, *mate2);
+        }
+
         delete mate1;
         delete mate2;
 
@@ -2342,7 +2432,7 @@ public:
     }
 };
 
-bool AccAlign::tbb_fastq(const char *F1, const char *F2) {
+bool AccAlign::tbb_fastq(const char *F1, const char *F2, AccAlign *_acc_obj_ga) {
     gzFile in1 = gzopen(F1, "rt");
     if (in1 == Z_NULL)
         return false;
@@ -2429,9 +2519,9 @@ bool AccAlign::tbb_fastq(const char *F1, const char *F2) {
 
         int max_objects = 1000000;
         limiter_node<ReadPair> lnode(g, max_objects);
-        function_node<ReadPair, ReadPair> map_node(g, unlimited, tbb_map(this));
-        function_node<ReadPair, ReadPair> align_node(g, unlimited, tbb_align(this));
-        function_node<ReadPair, continue_msg> score_node(g, 1, tbb_score(this));
+        function_node<ReadPair, ReadPair> map_node(g, unlimited, tbb_map(this, _acc_obj_ga));
+        function_node<ReadPair, ReadPair> align_node(g, unlimited, tbb_align(this, _acc_obj_ga));
+        function_node<ReadPair, continue_msg> score_node(g, 1, tbb_score(this, _acc_obj_ga));
 
         make_edge(score_node, lnode.decrement);
         make_edge(align_node, score_node);
@@ -2518,9 +2608,6 @@ int main(int ac, char **av) {
     tbb::task_scheduler_init init(g_ncpus);
     make_code();
 
-//    start_mapping(ac, av, opn, false);
-//    start_mapping(ac, av, opn, false);
-
     Reference *r1 = new Reference(av[opn], false);
     Reference *r2 = new Reference(av[opn], true);
     opn++;
@@ -2531,14 +2618,16 @@ int main(int ac, char **av) {
     auto start = std::chrono::system_clock::now();
 
     AccAlign f1(*r1);
+    AccAlign f2(*r2);
+
     f1.open_output(g_out);
 
     if (opn == ac - 1) {
         f1.fastq(av[opn], "\0", false, *r2);
 //    f.tbb_fastq(av[opn], "\0");
     } else if (opn == ac - 2) {
-//    f.fastq(av[opn], av[opn + 1], false);
-        f1.tbb_fastq(av[opn], av[opn + 1]);
+//        f1.fastq(av[opn], av[opn + 1], false, *r2);
+      f1.tbb_fastq(av[opn], av[opn + 1], &f2);
     } else {
         print_usage();
         //return;
@@ -2555,40 +2644,5 @@ int main(int ac, char **av) {
 
     cerr << "Total time: " << (time(NULL) - total_begin) << " secs\n";
 
-
     return 0;
-}
-
-void start_mapping(int ac, char **av, int opn, bool is_ga) {
-    Reference *r = new Reference(av[opn], is_ga);
-    opn++;
-    if (enable_extension && !enable_wfa_extension)
-        ksw_gen_simple_mat(5, mat, SC_MCH, SC_MIS, SC_AMBI);
-
-    size_t total_begin = time(NULL);
-    auto start = std::chrono::system_clock::now();
-
-    AccAlign f(*r);
-    f.open_output(g_out);
-
-    if (opn == ac - 1) {
-        f.fastq(av[opn], "\0", false, *r);
-//    f.tbb_fastq(av[opn], "\0");
-    } else if (opn == ac - 2) {
-//    f.fastq(av[opn], av[opn + 1], false);
-        f.tbb_fastq(av[opn], av[opn + 1]);
-    } else {
-        print_usage();
-        return;
-    }
-
-    auto end = std::chrono::system_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    cerr << "Time to align: " << elapsed.count() / 1000 << " secs\n";
-
-    f.print_stats();
-    f.close_output();
-    delete r;
-
-    cerr << "Total time: " << (time(NULL) - total_begin) << " secs\n";
 }

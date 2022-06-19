@@ -11,7 +11,6 @@ const char *CT_ext = ".ct_hash";
 const char *GA_ext = ".ga_hash";
 
 unsigned kmer;
-bool create_GA_hash = false;
 
 struct Data {
   uint32_t key, pos;
@@ -209,8 +208,6 @@ int main(int ac, char **av) {
   for (int it = 1; it < ac; it++) {
     if (strcmp(av[it], "-l") == 0)
       kmer_temp = atoi(av[it + 1]);
-    if (strcmp(av[it], "--non_directional") == 0)
-        create_GA_hash = true;
   }
   kmer = 32;
   if (kmer_temp != 0)
@@ -223,11 +220,10 @@ int main(int ac, char **av) {
   cerr << "Creating CT hash table: " << av[ac - 1] << CT_ext << endl;
   if (!ct_index.make_index(av[ac - 1], CT_ext)) return 0;
 
-  if (create_GA_hash) {
-       Index ga_index;
-       if (!ga_index.load_and_convert_ref(av[ac - 1], a_base_coded, c_base_coded, a_base_coded, t_base_coded)) return 0;
-       cerr << "Creating GA hash table: " << av[ac - 1] << GA_ext << endl;
-       if (!ga_index.make_index(av[ac - 1], GA_ext)) return 0;
-  }
+   Index ga_index;
+   if (!ga_index.load_and_convert_ref(av[ac - 1], a_base_coded, c_base_coded, a_base_coded, t_base_coded)) return 0;
+   cerr << "Creating GA hash table: " << av[ac - 1] << GA_ext << endl;
+   if (!ga_index.make_index(av[ac - 1], GA_ext)) return 0;
+
   return 0;
 }

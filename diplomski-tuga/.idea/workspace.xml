@@ -12,7 +12,31 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8cc2bfac-6c0f-4cdb-8fda-04b5303ce417" name="Changes" comment="" />
+    <list default="true" id="8cc2bfac-6c0f-4cdb-8fda-04b5303ce417" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/../diplomski-indexing/cmake-build-debug/Testing/Temporary/LastTest.log" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-indexing/cmake-build-debug/Testing/Temporary/LastTest.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/accalign.h" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/accalign.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/.cmake/api/v1/reply/cache-v2-31762b417b83906de409.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/.cmake/api/v1/reply/cmakeFiles-v1-b1878032d917b7c25322.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/.cmake/api/v1/reply/index-2022-06-05T19-50-23-0518.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/.ninja_deps" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/.ninja_deps" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/.ninja_log" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/.ninja_log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeCache.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeCache.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeFiles/3.22.3/CMakeSystem.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeFiles/3.22.3/CMakeSystem.cmake" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeFiles/CMakeOutput.log" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeFiles/CMakeOutput.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeFiles/clion-environment.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeFiles/clion-environment.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeFiles/clion-log.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeFiles/clion-log.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeFiles/diplomski_tuga.dir/embedding.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeFiles/diplomski_tuga.dir/embedding.cpp.o" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeFiles/diplomski_tuga.dir/main.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeFiles/diplomski_tuga.dir/main.cpp.o" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeFiles/diplomski_tuga.dir/reference.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeFiles/diplomski_tuga.dir/reference.cpp.o" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeFiles/rules.ninja" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/CMakeFiles/rules.ninja" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/Testing/Temporary/LastTest.log" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/Testing/Temporary/LastTest.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/build.ninja" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/build.ninja" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/diplomski_tuga" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/diplomski_tuga" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/mojoutputic.sam" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/cmake-build-debug/mojoutputic.sam" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/main.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../diplomski-mapping/type.h" beforeDir="false" afterPath="$PROJECT_DIR$/../diplomski-mapping/type.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -47,7 +71,7 @@
     "WebServerToolWindowFactoryState": "false",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
-    "last_opened_file_path": "/home/vagabundo/CLionProjects/parse_tuga",
+    "last_opened_file_path": "/home/vagabundo/CLionProjects/diplomski-indexing",
     "settings.editor.selected.configurable": "preferences.editor"
   }
 }]]></component>
@@ -57,11 +81,6 @@
     </key>
   </component>
   <component name="RunManager">
-    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
     <configuration name="diplomski_tuga" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="-l 32 -t 4 -o mojoutput.sam $USER_HOME$/Documents/genome-clion-probni-podaci/Homo_sapiens.GRCh37.dna.chromosome.1.fa $USER_HOME$/Documents/genome-clion-probni-podaci/test_sintetic2.fastq" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="diplomski_tuga" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Project" RUN_TARGET_NAME="diplomski_tuga">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
@@ -81,6 +100,7 @@
       <workItem from="1654024305340" duration="12765000" />
       <workItem from="1654172706954" duration="8310000" />
       <workItem from="1654458555955" duration="33000" />
+      <workItem from="1655591293822" duration="8000" />
     </task>
     <servers />
   </component>
