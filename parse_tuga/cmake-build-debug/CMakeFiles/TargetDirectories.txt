@@ -1,3 +1,0 @@
-/home/vagabundo/CLionProjects/parse_tuga/cmake-build-debug/CMakeFiles/parse_tuga.dir
-/home/vagabundo/CLionProjects/parse_tuga/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/vagabundo/CLionProjects/parse_tuga/cmake-build-debug/CMakeFiles/rebuild_cache.dir

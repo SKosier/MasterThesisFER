@@ -1,3 +1,0 @@
-/home/vagabundo/CLionProjects/diplomski-indexing/cmake-build-debug/CMakeFiles/diplomski_tuga.dir
-/home/vagabundo/CLionProjects/diplomski-indexing/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/vagabundo/CLionProjects/diplomski-indexing/cmake-build-debug/CMakeFiles/rebuild_cache.dir
