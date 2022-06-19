@@ -1898,7 +1898,7 @@ static inline void mm_seq_rev(uint32_t len, char *seq) {
 }
 
 static void append_cigar(Extension *&rp, uint32_t n_cigar, uint32_t *cigar) {
-if (n_cigar == 0) return;
+    if (n_cigar == 0) return;
     if (rp == 0) {
         uint32_t capacity = n_cigar + sizeof(Extension) / 4;
         kroundup32(capacity);
@@ -2405,11 +2405,7 @@ public:
     tbb_score(AccAlign *_acc_obj_ct, AccAlign *_acc_obj_ga) : accalign_ct(_acc_obj_ct), accalign_ga(_acc_obj_ga) {}
 
     continue_msg operator()(Read *r) {
-        if (r->mapped_to_ga) {
-            accalign_ga->print_sam(*r);
-        } else {
-            accalign_ct->print_sam(*r);
-        }
+        accalign_ct->print_sam(*r);
 
         delete r;
         return continue_msg();
@@ -2419,11 +2415,7 @@ public:
         Read *mate1 = std::get<0>(p);
         Read *mate2 = std::get<1>(p);
 
-        if (mate1->mapped_to_ga) {
-            accalign_ga->print_paired_sam(*mate1, *mate2);
-        } else {
-            accalign_ct->print_paired_sam(*mate1, *mate2);
-        }
+        accalign_ct->print_paired_sam(*mate1, *mate2);
 
         delete mate1;
         delete mate2;
