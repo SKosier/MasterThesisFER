@@ -3,6 +3,13 @@
 using namespace std;
 const unsigned mod = (1UL << 29) - 1;
 const unsigned step = 1;
+const char a_base_coded = 0;
+const char c_base_coded = 1;
+const char g_base_coded = 2;
+const char t_base_coded = 3;
+const char *CT_ext = ".ct_hash";
+const char *GA_ext = ".ga_hash";
+
 unsigned kmer;
 
 struct Data {
@@ -20,19 +27,19 @@ class Index {
  private:
   string ref;
  public:
-  bool load_ref(const char *F);
-  bool make_index(const char *F);
+  bool load_and_convert_ref(const char *F, const char a_code, const char c_code, const char g_code, const char t_code);
+  bool make_index(const char *F, const char *ext);
   void cal_key(size_t i, vector<Data> &data);
 };
 
-bool Index::load_ref(const char *F) {
+bool Index::load_and_convert_ref(const char *F, const char a_code, const char c_code, const char g_code, const char t_code) {
   char code[256], buf[65536];
   for (size_t i = 0; i < 256; i++)
     code[i] = 4;
-  code['A'] = code['a'] = 0;
-  code['C'] = code['c'] = 1;
-  code['G'] = code['g'] = 2;
-  code['T'] = code['t'] = 3;
+  code['A'] = code['a'] = a_code;
+  code['C'] = code['c'] = c_code;
+  code['G'] = code['g'] = g_code;
+  code['T'] = code['t'] = t_code;
   cerr << "Loading ref\n";
   FILE *f = fopen(F, "rb");
   if (f == NULL)
@@ -47,8 +54,9 @@ bool Index::load_ref(const char *F) {
     if (buf[0] == '>')
       continue;
     for (char *p = buf; *p; p++)
-      if (*p >= 33)
-        ref.push_back(*(code + *p));
+      if (*p >= 33) {
+          ref.push_back(*(code + *p));
+      }
   }
   fclose(f);
   cerr << "genome\t" << ref.size() << '\n';
@@ -85,7 +93,7 @@ class Tbb_cal_key {
   }
 };
 
-bool Index::make_index(const char *F) {
+bool Index::make_index(const char *F, const char *ext) {
   size_t limit = ref.size() - kmer + 1;
   size_t vsz;
   if (step == 1)
@@ -112,7 +120,7 @@ bool Index::make_index(const char *F) {
 
   cerr << "writing\n";
   string fn = F;
-  fn += ".hash";
+  fn += ext;
   ofstream fo(fn.c_str(), ios::binary);
 
   // determine the number of valid entries based on first junk entry
@@ -207,10 +215,15 @@ int main(int ac, char **av) {
 
   cerr << "Using kmer length " << kmer << " and step size " << step << endl;
 
-  Index i;
-  if (!i.load_ref(av[ac - 1]))
-    return 0;
-  if (!i.make_index(av[ac - 1]))
-    return 0;
+  Index ct_index;
+  if (!ct_index.load_and_convert_ref(av[ac - 1], a_base_coded, t_base_coded, g_base_coded, t_base_coded)) return 0;
+  cerr << "Creating CT hash table: " << av[ac - 1] << CT_ext << endl;
+  if (!ct_index.make_index(av[ac - 1], CT_ext)) return 0;
+
+   Index ga_index;
+   if (!ga_index.load_and_convert_ref(av[ac - 1], a_base_coded, c_base_coded, a_base_coded, t_base_coded)) return 0;
+   cerr << "Creating GA hash table: " << av[ac - 1] << GA_ext << endl;
+   if (!ga_index.make_index(av[ac - 1], GA_ext)) return 0;
+
   return 0;
 }
