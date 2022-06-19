@@ -1,3 +1,0 @@
-/home/vagabundo/CLionProjects/project/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/vagabundo/CLionProjects/project/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/vagabundo/CLionProjects/project/cmake-build-debug/CMakeFiles/project.dir
