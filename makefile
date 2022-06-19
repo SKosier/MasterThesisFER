@@ -7,7 +7,7 @@ else
 endif
 
 ACCLDFLAGS=./WFA/build/libwfa.a -lz -ltbb 
-TARGETS=accindex accalign
+TARGETS=bsfindex bsfalign
 CPUSRC=reference.cpp accalign.cpp embedding.cpp ksw2_extz2_sse.c
 IDXSRC=index.cpp embedding.cpp
 HEADERS=$(wildcard *.h) 
