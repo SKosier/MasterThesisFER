@@ -93,7 +93,7 @@ gzFile &operator>>(gzFile &in, Read &r) {
 }
 
 void print_usage() {
-    cerr << "accalign [options] <ref.fa> [read1.fastq] [read2.fastq]\n";
+    cerr << "bsfalign [options] <ref.fa> [read1.fastq] [read2.fastq]\n";
     cerr << "\t Maximum read length supported is 512\n";
     cerr << "options:\n";
     cerr << "\t-t INT Number of cpu threads to use [all]\n";
@@ -103,7 +103,6 @@ void print_usage() {
     cerr << "\t-w Use WFA for extension. KSW used by default. \n";
     cerr << "\t-p Maximum distance allowed between the paired-end reads [1000]\n";
     cerr << "\t-d Disable embedding, extend all candidates from seeding (this mode is super slow, only for benchmark).\n";
-//    cerr << "\t-n Non directional; The best out of four (CT-CT, CT-GA, GA-CT, GA-GA) read mapping is chosen as the best reference mapping\n";
 }
 
 void AccAlign::print_stats() {
@@ -2121,7 +2120,6 @@ void AccAlign::align_read(Read &R) {
     sw_time += elapsed.count();
 }
 
-// TODO (SK) check pattern jer koristi ref.str()
 //  affine_wavefronts_align(affine_wavefronts, pattern, rlen, text, rlen);
 void AccAlign::wfa_align_read(Read &R) {
     auto start = std::chrono::system_clock::now();
@@ -2134,7 +2132,7 @@ void AccAlign::wfa_align_read(Read &R) {
     char *text = R.strand == '+' ? R.fwd : R.rev;
     const char *pattern = ref.c_str() + region.rs;
 
-  /*  if (enable_extension && region.embed_dist) {
+    if (enable_extension && region.embed_dist) {
         // Allocate MM
         mm_allocator_t *const mm_allocator = mm_allocator_new(BUFFER_SIZE_8M);
         // Set penalties
@@ -2197,7 +2195,7 @@ void AccAlign::wfa_align_read(Read &R) {
             break;
         }
     }
-    R.pos = R.pos - offset[R.tid] + 1;*/
+    R.pos = R.pos - offset[R.tid] + 1;
 
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
@@ -2531,8 +2529,6 @@ bool AccAlign::tbb_fastq(const char *F1, const char *F2, AccAlign *_acc_obj_ga) 
 }
 
 int main(int ac, char **av) {
-    std::cout << "Hello, World!" << std::endl;
-
     if (ac < 3) {
         print_usage();
         return 0;
