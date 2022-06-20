@@ -2101,7 +2101,7 @@ void AccAlign::save_region(Read &R, size_t rlen, Region &region,
 void AccAlign::align_read(Read &R) {
     auto start = std::chrono::system_clock::now();
 
-    if (R.strand == '*' || R.isAligned) {
+    if (R.strand == '*') {
         return;
     }
 
@@ -2132,7 +2132,8 @@ void AccAlign::wfa_align_read(Read &R) {
     char *text = R.strand == '+' ? R.fwd : R.rev;
     const char *pattern = ref.c_str() + region.rs;
 
-   /* if (enable_extension && region.embed_dist) {
+    /*
+    if (enable_extension && region.embed_dist) {
         // Allocate MM
         mm_allocator_t *const mm_allocator = mm_allocator_new(BUFFER_SIZE_8M);
         // Set penalties
@@ -2614,7 +2615,7 @@ int main(int ac, char **av) {
         f1.fastq(av[opn], "\0", false, *r2);
 //    f.tbb_fastq(av[opn], "\0");
     } else if (opn == ac - 2) {
-//        f1.fastq(av[opn], av[opn + 1], false, *r2);
+     //   f1.fastq(av[opn], av[opn + 1], false, *r2);
       f1.tbb_fastq(av[opn], av[opn + 1], &f2);
     } else {
         print_usage();
