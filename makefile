@@ -18,10 +18,10 @@ all: WFA ${TARGETS}
 WFA:
 	$(MAKE) -C WFA clean all
 
-accindex: ${IDXSRC} ${HEADERS}
+bsfindex: ${IDXSRC} ${HEADERS}
 	${CC} -o $@ ${IDXSRC} ${ACCLDFLAGS} ${CFLAGS} 
 
-accalign: ${CPUSRC} ${HEADERS}
+bsfalign: ${CPUSRC} ${HEADERS}
 	${CC} -o $@ ${CPUSRC} ${ACCLDFLAGS} ${CFLAGS}
 
 clean:
