@@ -57,26 +57,26 @@ Options:
 ### Pair-end alignment ###
 
 ``` 
-path-to-bisulfite-aligner/accalign options ref.fna read1.fastq read2.fastq
+path-to-bisulfite-aligner/bsfalign options ref.fna read1.fastq read2.fastq
 ```
 
 Example:
 
 ``` 
-path-to-bisulfite-align/accalign -l 32 -t 4 -o output-path/out.sam \
+path-to-bisulfite-align/bsfalign -l 32 -t 4 -o output-path/out.sam \
 path-to-ref/ref.fna input-path/read1.fastq input-path/read2.fastq
 ``` 
 
 ### Single-end alignment ###
 
 ``` 
-path-to-bisulfite-aligner/accalign options ref.fna read.fastq
+path-to-bisulfite-aligner/bsfalign options ref.fna read.fastq
 ```
 
 Example:
 
 ``` 
-path-to-bisulfite-aligner/accalign -l 32 -t 4 -o output-path/out.sam \
+path-to-bisulfite-aligner/bsfalign -l 32 -t 4 -o output-path/out.sam \
 path-to-ref/ref.fna input-path/read.fastq
 ``` 
 
