@@ -2132,7 +2132,7 @@ void AccAlign::wfa_align_read(Read &R) {
     char *text = R.strand == '+' ? R.fwd : R.rev;
     const char *pattern = ref.c_str() + region.rs;
 
-    if (enable_extension && region.embed_dist) {
+   /* if (enable_extension && region.embed_dist) {
         // Allocate MM
         mm_allocator_t *const mm_allocator = mm_allocator_new(BUFFER_SIZE_8M);
         // Set penalties
@@ -2195,7 +2195,7 @@ void AccAlign::wfa_align_read(Read &R) {
             break;
         }
     }
-    R.pos = R.pos - offset[R.tid] + 1;
+    R.pos = R.pos - offset[R.tid] + 1;*/
 
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
