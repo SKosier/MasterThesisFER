@@ -32,10 +32,10 @@ It's mandatory to build the index before alignment. Options:
 Example:
 
 ```
-path-to-bisulfite-aligner/accindex -l 32 path-to-ref/ref.fna
+path-to-bisulfite-aligner/bsfindex -l 32 path-to-ref/ref.fna
 ```
 
-It will generate the index aside the reference genome as `path-to-ref/ref.fna.hash`.
+It will generate two indices aside the reference genome as `path-to-ref/ref.fna.ct_hash` and `path-to-ref/ref.fna.ga_hash`.
 
 ### Align ###
 
