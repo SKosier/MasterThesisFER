@@ -42,6 +42,7 @@ static void parse(char seq[], char fwd[], char rev[], char rev_str[], uint8_t co
 
     for (size_t i = 0; i < len; i++) {
         uint8_t c = *(code + seq[i]);
+        rev_str[len - 1 - i] = rcsymbol[c];
 
         // check if we should convert sequence to ct
         if (conversion_type == ct_conv_type && c == 1) {
@@ -54,7 +55,6 @@ static void parse(char seq[], char fwd[], char rev[], char rev_str[], uint8_t co
 
         fwd[i] = c;
         rev[len - 1 - i] = c == 4 ? c : 3 - c;
-        rev_str[len - 1 - i] = rcsymbol[c];
     }
     *(fwd + len) = '\0';
     *(rev + len) = '\0';
