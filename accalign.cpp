@@ -1995,7 +1995,7 @@ void AccAlign::score_region(Read &r, char *qseq, Region &region,
         }
 
         // right extension
-        if (qe < qe0 && re < re0) {
+        if (qe < qe0 && re <= re0) {
             ksw_extz_t ez_r;
             memset(&ez_r, 0, sizeof(ksw_extz_t));
             const uint8_t *_tseq = reinterpret_cast<const uint8_t *>(ref.c_str() + re);
